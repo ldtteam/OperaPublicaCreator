@@ -52,7 +52,7 @@ jobs:
       - id: generateMinecraftVersion
         name: "Generate Minecraft version"
         run: |
-          cat gradle.properties | grep "(exactMinecraftVersion|minecraft.version)=" | cut -d "=" -f 2 > minecraft_version.txt
+          cat gradle.properties | grep -e "(exactMinecraftVersion|minecraft.version)=" | cut -d "=" -f 2 > minecraft_version.txt
           echo "Minecraft version: $(cat minecraft_version.txt)"
           echo "minecraft_version=$(cat minecraft_version.txt)" >> "$GITHUB_OUTPUT"
 
