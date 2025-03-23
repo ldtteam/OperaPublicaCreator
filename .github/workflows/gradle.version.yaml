@@ -53,8 +53,8 @@ jobs:
         name: "Generate Minecraft version"
         run: |
           cat gradle.properties
-          cat gradle.properties | grep -e "(exactMinecraftVersion|minecraft.version)="
-          cat gradle.properties | grep -e "(exactMinecraftVersion|minecraft.version)=" | cut -d "=" -f 2
+          cat gradle.properties | grep -P "(exactMinecraftVersion|minecraft.version)="
+          cat gradle.properties | grep -P "(exactMinecraftVersion|minecraft.version)=" | cut -d "=" -f 2
           version=$(cat gradle.properties | grep -e "(exactMinecraftVersion|minecraft.version)=" | cut -d "=" -f 2)
           echo "$version"
           echo "$version" > minecraft_version.txt
