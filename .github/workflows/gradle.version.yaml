@@ -43,7 +43,7 @@ jobs:
         name: "📦 Checkout"
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1000
+          fetch-depth: 0
           fetch-tags: true
 
       - name: Fetch tags # See https://github.com/actions/checkout/issues/2041
@@ -52,6 +52,7 @@ jobs:
       - id: generateMinecraftVersion
         name: "Generate Minecraft version"
         run: |
+          cat gradle.properties
           cat gradle.properties | grep -e "(exactMinecraftVersion|minecraft.version)=" | cut -d "=" -f 2
           version=$(cat gradle.properties | grep -e "(exactMinecraftVersion|minecraft.version)=" | cut -d "=" -f 2)
           echo "$version"
