@@ -55,7 +55,7 @@ jobs:
           cat gradle.properties
           cat gradle.properties | grep -P "(exactMinecraftVersion|minecraft.version)="
           cat gradle.properties | grep -P "(exactMinecraftVersion|minecraft.version)=" | cut -d "=" -f 2
-          version=$(cat gradle.properties | grep -e "(exactMinecraftVersion|minecraft.version)=" | cut -d "=" -f 2)
+          version=$(cat gradle.properties | grep -P "(exactMinecraftVersion|minecraft.version)=" | cut -d "=" -f 2)
           echo "$version"
           echo "$version" > minecraft_version.txt
           echo "Minecraft version: $(cat minecraft_version.txt)"
