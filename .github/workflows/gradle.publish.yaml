@@ -64,7 +64,7 @@ jobs:
 
   compute-version:
     needs: [ "generate-release-information" ]
-    uses: ./.github/workflows/gradle.version.yaml
+    uses: ldtteam/operapublicacreator/.github/workflows/gradle.version.yaml@main
     with:
       suffix: ${{ needs.generate-release-information.outputs.release_version_suffix }}
 
@@ -118,8 +118,11 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: wrapper
-          dependency-graph: generate-and-submit
+          dependency-graph: ${{ runner.debug == '1' && 'generate-and-upload' || 'generate-and-submit' }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+          build-scan-publish: ${{ runner.debug == '1' && 'true' || 'false' }}
+          build-scan-terms-of-use-url: 'https://gradle.com/terms-of-service'
+          build-scan-terms-of-use-agree: 'yes'
 
       - id: tagLocalBuild
         name: "🏷️ Tag local build"
@@ -152,7 +155,12 @@ jobs:
 
       - id: publish
         name: "🚀 Publish"
-        run: ./gradlew --build-cache ${{ inputs.gradle_tasks }} -PmodVersion=${{ needs.compute-version.outputs.mod_version }} -PmodVersionSuffix=${{ needs.compute-version.outputs.suffix }}
+        run: |
+          if [[ "${{ runner.debug }}" == "1" ]]; then
+            ./gradlew --build-cache ${{ inputs.gradle_tasks }} -PmodVersion=${{ needs.compute-version.outputs.mod_version }} -PmodVersionSuffix=${{ needs.compute-version.outputs.suffix }} --stacktrace --info --scan
+          else
+            ./gradlew --build-cache ${{ inputs.gradle_tasks }} -PmodVersion=${{ needs.compute-version.outputs.mod_version }} -PmodVersionSuffix=${{ needs.compute-version.outputs.suffix }}
+          fi
         env:
           LDTTeamJfrogUsername: ${{ secrets.MAVEN_USER }}
           LDTTeamJfrogPassword: ${{ secrets.MAVEN_PASSWORD }}
@@ -169,6 +177,13 @@ jobs:
           release_name: ${{ needs.compute-version.outputs.release_text }}
           body_path: changelog.md
           prerelease: ${{ inputs.curse_release_type != 'release' }}
+          
+      - name: Upload build reports
+        uses: actions/upload-artifact@v4
+        if: ${{ runner.debug == '1' }}
+        with:
+          name: build-reports
+          path: "**/build/reports/"
 
   notify-build-end:
     needs: [ "compute-version", "notify-build-start", "gradle" ]
