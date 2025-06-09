@@ -744,7 +744,13 @@ availableSourceSets.forEach(sourceSetName -> {
         forgeCoordinate = "net.neoforged:neoforge"
     }
 
-    dependencies.add(configurationName,  "${forgeCoordinate}:${project.forgeVersion}");
+    def shouldPrefix = opc.isFeatureEnabled("minecraftPrefixedForgeVersion")
+    def forgeVersionWithPotentialPrefix = project.forgeVersion;
+    if (shouldPrefix) {
+        forgeVersionWithPotentialPrefix = "${project.minecraftVersion}-${project.forgeVersion}"
+    }
+
+    dependencies.add(configurationName,  "${forgeCoordinate}:${forgeVersionWithPotentialPrefix}");
 })
 
 def primaryJarClassifier = ''
