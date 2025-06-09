@@ -739,7 +739,12 @@ availableSourceSets.forEach(sourceSetName -> {
         configurationName = "implementation"
     }
 
-    dependencies.add(configurationName,  "net.neoforged:neoforge:${project.forgeVersion}");
+    def forgeCoordinate = opc.getProperty("forgeCapability")
+    if (forgeCoordinate == "") {
+        forgeCoordinate = "net.neoforged:neoforge"
+    }
+
+    dependencies.add(configurationName,  "${forgeCoordinate}:${project.forgeVersion}");
 })
 
 def primaryJarClassifier = ''
