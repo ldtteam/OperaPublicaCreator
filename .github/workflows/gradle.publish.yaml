@@ -53,23 +53,23 @@ jobs:
       - id: generateReleaseSuffix
         name: "Generate release suffix"
         run: |
-          release_version_suffix="-alpha"
+          release_version_suffix="alpha"
           if [[ ${{ inputs.curse_release_type }} == release ]]; then
             release_version_suffix=""
           elif [[ ${{ inputs.curse_release_type }} == beta ]]; then
-            release_version_suffix="-snapshot"
+            release_version_suffix="snapshot"
           fi
           echo "Release version suffix: ${release_version_suffix}"
           echo "release_version_suffix=${release_version_suffix}" >> "$GITHUB_OUTPUT"
 
   compute-version:
-    needs: [ "generate-release-information" ]
+    needs: ["generate-release-information"]
     uses: ldtteam/operapublicacreator/.github/workflows/gradle.version.yaml@main
     with:
       suffix: ${{ needs.generate-release-information.outputs.release_version_suffix }}
 
   notify-build-start:
-    needs: [ "compute-version" ]
+    needs: ["compute-version"]
     name: "🔴 Build notifications (start)"
     runs-on: ubuntu-latest
     steps:
@@ -77,7 +77,7 @@ jobs:
         name: "🔴 Send Discord start notification"
         with:
           webhook_url: ${{ secrets.DISCORD_WEBHOOK }}
-          status: 'started'
+          status: "started"
           version: "${{ needs.compute-version.outputs.full_version }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -86,13 +86,13 @@ jobs:
         name: "🚧 Set pending status"
         with:
           authToken: ${{secrets.GITHUB_TOKEN}}
-          context: 'Publishing'
-          state: 'pending'
+          context: "Publishing"
+          state: "pending"
           description: ${{ needs.compute-version.outputs.release_text }}
           target_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
   gradle:
-    needs: [ "compute-version" ]
+    needs: ["compute-version"]
     runs-on: ubuntu-latest
     concurrency:
       group: ${{ github.ref }}
@@ -121,8 +121,8 @@ jobs:
           dependency-graph: ${{ runner.debug == '1' && 'generate-and-upload' || 'generate-and-submit' }}
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           build-scan-publish: ${{ runner.debug == '1' && 'true' || 'false' }}
-          build-scan-terms-of-use-url: 'https://gradle.com/terms-of-service'
-          build-scan-terms-of-use-agree: 'yes'
+          build-scan-terms-of-use-url: "https://gradle.com/terms-of-service"
+          build-scan-terms-of-use-agree: "yes"
 
       - id: tagLocalBuild
         name: "🏷️ Tag local build"
@@ -177,7 +177,7 @@ jobs:
           release_name: ${{ needs.compute-version.outputs.release_text }}
           body_path: changelog.md
           prerelease: ${{ inputs.curse_release_type != 'release' }}
-          
+
       - name: Upload build reports
         uses: actions/upload-artifact@v4
         if: ${{ runner.debug == '1' }}
@@ -186,7 +186,7 @@ jobs:
           path: "**/build/reports/"
 
   notify-build-end:
-    needs: [ "compute-version", "notify-build-start", "gradle" ]
+    needs: ["compute-version", "notify-build-start", "gradle"]
     name: "🔴 Build notifications (end)"
     if: ${{ always() }}
     runs-on: ubuntu-latest
@@ -203,7 +203,7 @@ jobs:
         name: "🚧 Set build status"
         with:
           authToken: ${{ secrets.GITHUB_TOKEN }}
-          context: 'Publishing'
+          context: "Publishing"
           state: ${{ needs.gradle.result }}
           description: ${{ needs.compute-version.outputs.release_text }}
           target_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
