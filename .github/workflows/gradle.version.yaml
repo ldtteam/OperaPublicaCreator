@@ -69,7 +69,12 @@ jobs:
       - id: generateFullVersion
         name: "Generate full version"
         run: |
-          full_version="${{ steps.generateModVersion.outputs.version }}-${{ steps.generateMinecraftVersion.outputs.minecraft_version }}-${{ inputs.suffix }}"
+          if [[ -n "${{inputs.sufix}}" ]]
+          then
+            full_version="${{ steps.generateModVersion.outputs.version }}-${{ steps.generateMinecraftVersion.outputs.minecraft_version }}-${{ inputs.suffix }}"
+          else
+            full_version="${{ steps.generateModVersion.outputs.version }}-${{ steps.generateMinecraftVersion.outputs.minecraft_version }}
+          fi
           echo "Full version: ${full_version}"
           echo "full_version=${full_version}" >> "$GITHUB_OUTPUT"
 
