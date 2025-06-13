@@ -78,7 +78,7 @@ jobs:
       - id: generateFullVersion
         name: "Generate full version"
         run: |
-          if [[ -n ${{inputs.sufix}} ]]
+          if [[ -n "${{inputs.sufix}}" ]]
           then
             if [ ${{ steps.getVersionOrdering.outputs.uses_mc_version_order_first }} == "true" ] 
             then
