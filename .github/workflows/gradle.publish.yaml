@@ -53,23 +53,23 @@ jobs:
       - id: generateReleaseSuffix
         name: "Generate release suffix"
         run: |
-          release_version_suffix="-alpha"
+          release_version_suffix="alpha"
           if [[ ${{ inputs.curse_release_type }} == release ]]; then
             release_version_suffix=""
           elif [[ ${{ inputs.curse_release_type }} == beta ]]; then
-            release_version_suffix="-snapshot"
+            release_version_suffix="snapshot"
           fi
           echo "Release version suffix: ${release_version_suffix}"
           echo "release_version_suffix=${release_version_suffix}" >> "$GITHUB_OUTPUT"
 
   compute-version:
-    needs: [ "generate-release-information" ]
+    needs: ["generate-release-information"]
     uses: ./.github/workflows/gradle.version.yaml
     with:
       suffix: ${{ needs.generate-release-information.outputs.release_version_suffix }}
 
   notify-build-start:
-    needs: [ "compute-version" ]
+    needs: ["compute-version"]
     name: "🔴 Build notifications (start)"
     runs-on: ubuntu-latest
     steps:
@@ -77,7 +77,7 @@ jobs:
         name: "🔴 Send Discord start notification"
         with:
           webhook_url: ${{ secrets.DISCORD_WEBHOOK }}
-          status: 'started'
+          status: "started"
           version: "${{ needs.compute-version.outputs.full_version }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -86,13 +86,13 @@ jobs:
         name: "🚧 Set pending status"
         with:
           authToken: ${{secrets.GITHUB_TOKEN}}
-          context: 'Publishing'
-          state: 'pending'
+          context: "Publishing"
+          state: "pending"
           description: ${{ needs.compute-version.outputs.release_text }}
           target_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
   gradle:
-    needs: [ "compute-version" ]
+    needs: ["compute-version"]
     runs-on: ubuntu-latest
     concurrency:
       group: ${{ github.ref }}
@@ -171,7 +171,7 @@ jobs:
           prerelease: ${{ inputs.curse_release_type != 'release' }}
 
   notify-build-end:
-    needs: [ "compute-version", "notify-build-start", "gradle" ]
+    needs: ["compute-version", "notify-build-start", "gradle"]
     name: "🔴 Build notifications (end)"
     if: ${{ always() }}
     runs-on: ubuntu-latest
@@ -188,7 +188,7 @@ jobs:
         name: "🚧 Set build status"
         with:
           authToken: ${{ secrets.GITHUB_TOKEN }}
-          context: 'Publishing'
+          context: "Publishing"
           state: ${{ needs.gradle.result }}
           description: ${{ needs.compute-version.outputs.release_text }}
           target_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
