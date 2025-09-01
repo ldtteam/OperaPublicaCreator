@@ -152,6 +152,8 @@ jobs:
           echo "" >> changelog.md
           ./gradlew --build-cache outputChangelogFooter -PmodVersion=${{ needs.compute-version.outputs.mod_version }} -PmodVersionSuffix=${{ needs.compute-version.outputs.suffix }}
           sed -i -E "s|\(#([[:digit:]]+)\)|([#\1](${{ github.server_url }}/${{ github.repository }}/pull/\1))|" changelog.md
+          echo "Outputting full changelog"
+          cat changelog.md
 
       - id: publish
         name: "🚀 Publish"
