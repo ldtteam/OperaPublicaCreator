@@ -134,7 +134,7 @@ jobs:
       - id: getPreviousTag
         name: "📝 Get previous tag"
         run: |
-          previous_tag=$(git describe --abbrev=0 --tags $(git rev-list --tags --skip=1 --max-count=1))
+          previous_tag=$(git describe --abbrev=0 --tags $(git rev-list --tags=${{ github.ref_name }} --skip=1 --max-count=1))
           echo "Previous tag: ${previous_tag}"
           echo "previous_tag=${previous_tag}" >> "$GITHUB_OUTPUT"
 
