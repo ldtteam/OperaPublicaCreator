@@ -1345,6 +1345,10 @@ if (opc.isFeatureEnabled("crowdInTranslationManagement") && opc.hasPropertySet("
                 if (opc.isFeatureEnabled("crowdInBranchSeparation")) {
                     configurationSpec.tokens.put("%branch_name%", git.branch.name)
                 }
+
+                if (opc.isFeatureEnabled("crowdInVersionSeparation")) {
+                    configurationSpec.tokens.put("%version_path%", "version/${project.exactMinecraftVersion}")
+                }
             }
         }
 
