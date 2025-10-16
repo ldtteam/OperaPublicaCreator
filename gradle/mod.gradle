@@ -595,7 +595,7 @@ runs {
     client {
         if (opc.isFeatureEnabled("randomUsernames")) {
             var randomAppendix = (Math.abs(new Random().nextInt() % 600) + 1).toString();
-            args '--username', "Dev{$randomAppendix}"
+            args '--username', "Dev${randomAppendix}"
         }
     }
 
