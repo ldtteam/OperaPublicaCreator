@@ -604,7 +604,7 @@ project.minecraft {
         }
         if (opc.isFeatureEnabled("randomUsernames")) {
             var randomAppendix = (Math.abs(new Random().nextInt() % 600) + 1).toString();
-            clientSpec.args '--username', "Dev{$randomAppendix}"
+            clientSpec.args '--username', "Dev${randomAppendix}"
         }
 
         def serverSpec = runSpecContainer.maybeCreate("server")
