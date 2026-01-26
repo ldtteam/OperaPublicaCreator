@@ -7,9 +7,14 @@ on:
         description: 'The version string (e.g., 1.20.1)'
         required: true
         type: string
+      workflow_file:
+        description: 'Workflow file to trigger on the release branch (e.g., main.yaml)'
+        required: true
+        type: string
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   sync-remote-branch:
@@ -41,3 +46,13 @@ jobs:
       - name: Push updated release/<version> branch
         run: |
           git push origin release/${{ inputs.version }}
+
+      - name: Trigger workflow on release/<version> branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          curl -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            https://api.github.com/repos/${{ github.repository }}/actions/workflows/${{ inputs.workflow_file }}/dispatches \
+            -d '{"ref":"release/${{ inputs.version }}"}'
