@@ -26,19 +26,18 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Delete local release/<version> branch if exists
+      - name: Fetch all branches
         run: |
-          git branch -D release/${{ github.event.inputs.version }} || true
+          git fetch --all
 
-      - name: Delete release release/<version> branch if exists
+      - name: Checkout release/<version> branch
         run: |
-          git push origin --delete release/${{ github.event.inputs.version }} || true
+          git checkout release/${{ inputs.version }}
 
-      - name: Create new release/<version> branch from version/<version>
+      - name: Fast-forward release/<version> to version/<version>
         run: |
-          git checkout version/${{ github.event.inputs.version }}
-          git checkout -b release/${{ github.event.inputs.version }}
+          git merge --ff-only origin/version/${{ inputs.version }}
 
-      - name: Force push release/<version> branch
+      - name: Push updated release/<version> branch
         run: |
-          git push origin release/${{ github.event.inputs.version }} --force
+          git push origin release/${{ inputs.version }}
