@@ -81,6 +81,7 @@ jobs:
       - id: generateTagVersion
         name: "Generate tag version"
         run: |
+          echo "Active suffix: ${{inputs.sufix}}"
           if [[ -n "${{inputs.sufix}}" ]]
           then
             tag_version="v${{ steps.generateMinecraftVersion.outputs.minecraft_version }}-${{ steps.generateModVersion.outputs.version }}-${{ inputs.suffix }}"
