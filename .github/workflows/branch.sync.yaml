@@ -26,19 +26,19 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Delete local remote/<version> branch if exists
+      - name: Delete local release/<version> branch if exists
         run: |
-          git branch -D remote/${{ github.event.inputs.version }} || true
+          git branch -D release/${{ github.event.inputs.version }} || true
 
-      - name: Delete remote remote/<version> branch if exists
+      - name: Delete release release/<version> branch if exists
         run: |
-          git push origin --delete remote/${{ github.event.inputs.version }} || true
+          git push origin --delete release/${{ github.event.inputs.version }} || true
 
-      - name: Create new remote/<version> branch from version/<version>
+      - name: Create new release/<version> branch from version/<version>
         run: |
           git checkout version/${{ github.event.inputs.version }}
-          git checkout -b remote/${{ github.event.inputs.version }}
+          git checkout -b release/${{ github.event.inputs.version }}
 
-      - name: Force push remote/<version> branch
+      - name: Force push release/<version> branch
         run: |
-          git push origin remote/${{ github.event.inputs.version }} --force
+          git push origin release/${{ github.event.inputs.version }} --force
