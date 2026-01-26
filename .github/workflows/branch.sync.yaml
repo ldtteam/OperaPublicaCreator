@@ -1,0 +1,44 @@
+name: Sync Remote Branch
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'The version string (e.g., 1.20.1)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  sync-remote-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository (full clone)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Set up git user
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Delete local remote/<version> branch if exists
+        run: |
+          git branch -D remote/${{ github.event.inputs.version }} || true
+
+      - name: Delete remote remote/<version> branch if exists
+        run: |
+          git push origin --delete remote/${{ github.event.inputs.version }} || true
+
+      - name: Create new remote/<version> branch from version/<version>
+        run: |
+          git checkout version/${{ github.event.inputs.version }}
+          git checkout -b remote/${{ github.event.inputs.version }}
+
+      - name: Force push remote/<version> branch
+        run: |
+          git push origin remote/${{ github.event.inputs.version }} --force
