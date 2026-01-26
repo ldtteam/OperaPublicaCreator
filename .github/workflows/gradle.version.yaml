@@ -69,7 +69,7 @@ jobs:
       - id: generateFullVersion
         name: "Generate full version"
         run: |
-          if [[ -n "${{ inputs.sufix }}" ]]
+          if [[ -n "${{ inputs.suffix }}" ]]
           then
             full_version="${{ steps.generateModVersion.outputs.version }}-${{ steps.generateMinecraftVersion.outputs.minecraft_version }}-${{ inputs.suffix }}"
           else
@@ -81,8 +81,8 @@ jobs:
       - id: generateTagVersion
         name: "Generate tag version"
         run: |
-          echo "Active suffix: ${{ inputs.sufix }}"
-          if [[ -n "${{ inputs.sufix }}" ]]
+          echo "Active suffix: ${{ inputs.suffix }}"
+          if [[ -n "${{ inputs.suffix }}" ]]
           then
             tag_version="v${{ steps.generateMinecraftVersion.outputs.minecraft_version }}-${{ steps.generateModVersion.outputs.version }}-${{ inputs.suffix }}"
           else
