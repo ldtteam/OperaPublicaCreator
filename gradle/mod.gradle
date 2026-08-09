@@ -1051,6 +1051,9 @@ if (opc.isFeatureEnabled("curse") && opc.hasPropertySet("curseId")
             mainArtifact.addGameVersion(v)
         }
 
+        mainArtifact.addGameVersion("client")
+        mainArtifact.addGameVersion("server")
+
         mainArtifact.releaseType = opc.hasPropertySet("curseReleaseType") ? opc.getProperty("curseReleaseType") : opc.getProperty("CURSERELEASETYPE")
         if (opc.isFeatureEnabled('reformatedCurseFiles')) {
             def mainArtifactName = rootProject.name
