@@ -1,0 +1,84 @@
+name: "[Gradle] Publish project to Github/JFrog/CurseForge/Crowdin"
+
+on:
+  workflow_call:
+    inputs:
+      image:
+        description: Which image to run the different tasks on (image must support bash)
+        type: string
+        required: true
+      java:
+        description: The version of Java to use to run Gradle
+        type: string
+        required: true
+      version:
+        description: The version to use during compilation
+        type: string
+        required: true
+      gradle_publish_task:
+        description: The name of the gradle publish task to use
+        type: string
+        required: true
+      release_type:
+        description: The type of release to make on Curse, can either be 'beta' or 'release'
+        type: string
+        required: false
+    secrets:
+      GRADLE_ENCRYPTION_KEY:
+        description: The AES key to enable Gradle cache encryption
+        required: false
+      GITHUB_PUBLISH_USER:
+        description: The user to use to publish to Github Packages
+        required: false
+      GITHUB_PUBLISH_TOKEN:
+        description: The token to publish to Github Packages
+        required: false
+      JFROG_PUBLISH_USER:
+        description: The user to use to publish to JFrog
+        required: false
+      JFROG_PUBLISH_PASSWORD:
+        description: The password for the user to publish to JFrog
+        required: false
+      CURSE_API_KEY:
+        description: The API key to publish to CurseForge
+        required: false
+      CROWDIN_API_KEY:
+        description: The API key to publish to Crowdin
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ${{ inputs.image }}
+    steps:
+      - name: "📦 Checkout"
+        uses: actions/checkout@v4
+
+      - name: "📦 Fetch tags" # See https://github.com/actions/checkout/issues/2041
+        run: git fetch --tags
+
+      - name: "⚙️ Configure Java"
+        run: echo "JAVA_HOME=$(echo $JAVA_HOME_${{ inputs.java }}_X64)" >> "$GITHUB_ENV"
+
+      - name: "⚙️ Configure Gradle"
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: wrapper
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      - name: "🚀 Publish"
+        run: ./gradlew --build-cache ${{ inputs.gradle_publish_task }} -PmodVersion=${{ inputs.version }}
+        env:
+          # Github
+          GITHUB_USERNAME: ${{ secrets.GITHUB_PUBLISH_USER }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_PUBLISH_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          # JFrog
+          LDTTeamJfrogUsername: ${{ secrets.JFROG_PUBLISH_USER }}
+          LDTTeamJfrogPassword: ${{ secrets.JFROG_PUBLISH_PASSWORD }}
+          # CurseForge
+          CURSE_API_KEY: ${{ secrets.CURSE_API_KEY }}
+          CURSE_RELEASE_TYPE: ${{ inputs.release_type }}
+          # Crowdin
+          CROWD_IN_API_KEY: ${{ secrets.CROWDIN_API_KEY }}

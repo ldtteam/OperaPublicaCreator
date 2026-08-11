@@ -267,34 +267,38 @@ group = project.modGroup
 
 def useMCVersionOrder = opc.isFeatureEnabled("MCVersionOrderFirst")
 
-def versionNumber = opc.hasPropertySet("modVersion") ? opc.getProperty("modVersion") : "0.0.1"
-def versionSuffix = opc.hasPropertySet("modVersionSuffix") ? opc.getProperty("modVersionSuffix") : ""
-def versionString
-if (versionSuffix == "") {
-    versionString = useMCVersionOrder
-            ? project.exactMinecraftVersion + "-" + versionNumber
-            : versionNumber + "-" + project.exactMinecraftVersion
+if (opc.hasPropertySet("fullVersion")) {
+    version = opc.getProperty("fullVersion")
 } else {
-    versionString = useMCVersionOrder
-            ? project.exactMinecraftVersion + "-" + versionNumber + "-" + versionSuffix
-            : versionNumber + "-" + project.exactMinecraftVersion + "-" + versionSuffix
-}
+    def versionNumber = opc.hasPropertySet("modVersion") ? opc.getProperty("modVersion") : "0.0.1"
+    def versionSuffix = opc.hasPropertySet("modVersionSuffix") ? opc.getProperty("modVersionSuffix") : ""
+    def versionString
+    if (versionSuffix == "") {
+        versionString = useMCVersionOrder
+                ? project.exactMinecraftVersion + "-" + versionNumber
+                : versionNumber + "-" + project.exactMinecraftVersion
+    } else {
+        versionString = useMCVersionOrder
+                ? project.exactMinecraftVersion + "-" + versionNumber + "-" + versionSuffix
+                : versionNumber + "-" + project.exactMinecraftVersion + "-" + versionSuffix
+    }
 
-if (opc.isFeatureEnabled("MCVersionBasedVersioning")
-        && opc.hasPropertySet("mcVersionElementIndex")
-        && opc.hasPropertySet("sourceVersionElementIndex")
-        && opc.hasPropertySet("sourceVersionName")) {
-    logger.lifecycle("MC based versioning active")
+    if (opc.isFeatureEnabled("MCVersionBasedVersioning")
+            && opc.hasPropertySet("mcVersionElementIndex")
+            && opc.hasPropertySet("sourceVersionElementIndex")
+            && opc.hasPropertySet("sourceVersionName")) {
+        logger.lifecycle("MC based versioning active")
 
-    version = opc.buildVersionNumberWithOffset(
-            versionString,
-            project.exactMinecraftVersion,
-            opc.getProperty("sourceVersionName"),
-            opc.getIntProperty("sourceVersionElementIndex"),
-            opc.getIntProperty("mcVersionElementIndex")
-    )
-} else {
-    version = versionString
+        version = opc.buildVersionNumberWithOffset(
+                versionString,
+                project.exactMinecraftVersion,
+                opc.getProperty("sourceVersionName"),
+                opc.getIntProperty("sourceVersionElementIndex"),
+                opc.getIntProperty("mcVersionElementIndex")
+        )
+    } else {
+        version = versionString
+    }
 }
 archivesBaseName = project.modId
 project.properties.file = [

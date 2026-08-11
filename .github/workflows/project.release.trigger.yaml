@@ -1,0 +1,67 @@
+name: "[Project] Trigger automated releases"
+
+on:
+  workflow_call:
+    inputs:
+      image:
+        description: Which image to run the different tasks on (image must support bash)
+        type: string
+        required: false
+        default: ubuntu-latest
+      release_yaml_file:
+        description: The release yaml file within your project to trigger
+        type: string
+        required: false
+        default: project.release.yaml
+      branch_pattern:
+        description: The pattern to select which branches to trigger a release for
+        type: string
+        required: true
+
+env:
+  GH_TOKEN: ${{ github.token }}
+
+permissions:
+  actions: write
+
+jobs:
+  validate-inputs:
+    runs-on: ${{ inputs.image }}
+    if: |
+      (inputs.image == '') ||
+      (inputs.release_yaml_file == '') ||
+      (inputs.branch_pattern == '')
+    steps:
+      - run: exit 1
+
+  determine-branches:
+    runs-on: ${{ inputs.image }}
+    outputs:
+      branches: ${{ steps.branchNames.outputs.branches }}
+    steps:
+      - name: "📦 Checkout"
+        uses: actions/checkout@v4
+
+      - id: branchNames
+        name: "⚙️ Get branch names"
+        run: |
+          branches=($(git branch -r -l --format="'%(refname:lstrip=3)'" origin/${{ inputs.branch_pattern }}))
+          branches_raw=$(printf ",%s" "${branches[@]}")
+          branches_json=[${branches_raw:1}]
+          echo $branches_json
+          echo "branches=${branches_json}" >> "$GITHUB_OUTPUT"
+
+  trigger-release:
+    runs-on: ${{ inputs.image }}
+    needs:
+      - determine-branches
+    strategy:
+      matrix:
+        branch: ${{ fromJson(needs.determine-branches.outputs.branches) }}
+    continue-on-error: true
+    steps:
+      - name: "📦 Checkout"
+        uses: actions/checkout@v4
+
+      - name: "🚀 Trigger release workflows"
+        run: gh workflow run ${{ inputs.release_yaml_file }} -r ${{ matrix.branch }}

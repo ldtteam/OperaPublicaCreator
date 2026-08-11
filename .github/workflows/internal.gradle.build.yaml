@@ -1,0 +1,50 @@
+name: "[Gradle] Build project"
+
+on:
+  workflow_call:
+    inputs:
+      image:
+        description: Which image to run the different tasks on (image must support bash)
+        type: string
+        required: true
+      java:
+        description: The version of Java to use to run Gradle
+        type: string
+        required: true
+      gradle_build_task:
+        description: The name of the gradle build task to use
+        type: string
+        required: true
+      version:
+        description: The version to use during compilation
+        type: string
+        required: true
+    secrets:
+      GRADLE_ENCRYPTION_KEY:
+        description: The AES key to enable Gradle cache encryption
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ${{ inputs.image }}
+    steps:
+      - name: "📦 Checkout"
+        uses: actions/checkout@v4
+
+      - name: "📦 Fetch tags" # See https://github.com/actions/checkout/issues/2041
+        run: git fetch --tags
+
+      - name: "⚙️ Configure Java"
+        run: echo "JAVA_HOME=$(echo $JAVA_HOME_${{ inputs.java }}_X64)" >> "$GITHUB_ENV"
+
+      - name: "⚙️ Configure Gradle"
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: wrapper
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      - name: "🏗️ Build"
+        run: ./gradlew --build-cache ${{ inputs.gradle_build_task }} -PfullVersion=${{ inputs.version }}

@@ -1,0 +1,85 @@
+name: "[Project] Build project & pre-release"
+
+on:
+  workflow_call:
+    inputs:
+      image:
+        description: Which image to run the different tasks on (image must support bash)
+        type: string
+        required: false
+        default: ubuntu-latest
+      java:
+        description: The version of Java to use to run Gradle
+        type: string
+        required: false
+        default: "21"
+      version_suffix:
+        description: The suffix to put behind the branch, defaults to the pull request number. If not a pull request you must define this by hand.
+        type: string
+        required: false
+        default: ${{ github.event.number }}
+      create_prerelease:
+        description: Whether to make a prerelease version or not
+        type: boolean
+        required: false
+        default: false
+      gradle_build_task:
+        description: The name of the gradle build task to use
+        type: string
+        required: false
+        default: build
+      gradle_publish_task:
+        description: The name of the gradle publish task to use
+        type: string
+        required: false
+        default: publish
+    secrets:
+      GRADLE_ENCRYPTION_KEY:
+        description: The AES key to enable Gradle cache encryption
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  validate-inputs:
+    runs-on: ${{ inputs.image }}
+    if: |
+      (inputs.image == '') ||
+      (inputs.java <= 0) ||
+      (inputs.version_suffix == '') ||
+      (inputs.gradle_build_task == '') &&
+      (inputs.gradle_publish_task == '')
+    steps:
+      - run: exit 1
+
+  compute-version:
+    uses: ./.github/workflows/internal.gradle.version.yaml
+    with:
+      image: ${{ inputs.image }}
+      version_suffix: ${{ inputs.version_suffix }}-rc
+      increment_version: ${{ inputs.create_prerelease && 'prepatch' || 'none' }}
+    secrets: inherit
+
+  build:
+    needs:
+      - compute-version
+    uses: ./.github/workflows/internal.gradle.build.yaml
+    with:
+      image: ${{ inputs.image }}
+      java: ${{ inputs.java }}
+      gradle_build_task: ${{ inputs.gradle_build_task }}
+      version: ${{ needs.compute-version.outputs.next_full_version }}
+    secrets: inherit
+
+  pre-release:
+    needs:
+      - compute-version
+    if: ${{ inputs.create_prerelease }}
+    uses: ./.github/workflows/internal.gradle.publish.yaml
+    with:
+      image: ${{ inputs.image }}
+      java: ${{ inputs.java }}
+      gradle_publish_task: ${{ inputs.gradle_publish_task }}
+      version: ${{ needs.compute-version.outputs.next_full_version }}
+    secrets: inherit

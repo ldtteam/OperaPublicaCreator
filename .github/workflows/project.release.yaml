@@ -1,0 +1,203 @@
+name: "[Project] Release new version"
+
+on:
+  workflow_call:
+    inputs:
+      image:
+        description: Which image to run the different tasks on (image must support bash)
+        required: false
+        type: string
+        default: ubuntu-latest
+      java:
+        description: The version of Java to use to run Gradle
+        required: true
+        type: number
+        default: 21
+      gradle_publish_task:
+        description: The name of the gradle publish task to use
+        type: string
+        required: false
+        default: publish
+      release_type:
+        description: The type of release to make on Curse, can either be 'beta' or 'release'
+        required: false
+        type: string
+        default: beta
+      increment_version:
+        description: How to increment the version, or none if no version increment is necessary. One of 'major', 'minor' or 'patch'
+        type: string
+        required: false
+        default: patch
+    secrets:
+      DISCORD_WEBHOOK:
+        required: true
+      MAVEN_USER:
+        required: true
+      MAVEN_PASSWORD:
+        required: true
+      CURSE_API_KEY:
+        required: true
+      CROWDIN_API_KEY:
+        required: true
+      GRADLE_ENCRYPTION_KEY:
+        description: The AES key to enable Gradle cache encryption
+        required: true
+
+permissions:
+  contents: write
+  statuses: write
+
+jobs:
+  validate-inputs:
+    runs-on: ${{ inputs.image }}
+    if: |
+      (inputs.image == '') ||
+      (inputs.java <= 0) ||
+      (inputs.gradle_publish_task == '') &&
+      (inputs.release_type != 'beta' && inputs.release_type != 'release') ||
+      (inputs.increment_version != 'major' && inputs.increment_version != 'minor' && inputs.increment_version != 'patch')
+    steps:
+      - run: exit 1
+
+  generate-release-information:
+    runs-on: ${{ inputs.image }}
+    outputs:
+      release_version_suffix: ${{ steps.generateReleaseSuffix.outputs.release_version_suffix }}
+    steps:
+      - id: generateReleaseSuffix
+        name: "⚙️ Compute release suffix"
+        run: |
+          release_version_suffix="alpha"
+          if [[ ${{ inputs.release_type }} == release ]]; then
+            release_version_suffix=""
+          elif [[ ${{ inputs.release_type }} == beta ]]; then
+            release_version_suffix="snapshot"
+          fi
+          echo "Release version suffix: ${release_version_suffix}"
+          echo "release_version_suffix=${release_version_suffix}" >> "$GITHUB_OUTPUT"
+
+  compute-version:
+    needs:
+      - generate-release-information
+    uses: ./.github/workflows/internal.gradle.version.yaml
+    with:
+      image: ${{ inputs.image }}
+      version_suffix: ${{ needs.generate-release-information.outputs.release_version_suffix }}
+      increment_version: ${{ inputs.increment_version }}
+
+  notify-build-start:
+    needs:
+      - compute-version
+    runs-on: ${{ inputs.image }}
+    steps:
+      - uses: neoforged/action-webhooks@v1
+        name: "🔴 Send Discord start notification"
+        with:
+          webhook_url: ${{ secrets.DISCORD_WEBHOOK }}
+          status: started
+          version: ${{ needs.compute-version.outputs.next_full_version }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: neoforged/action-github-status@v1
+        name: "🚧 Set pending status"
+        with:
+          authToken: ${{secrets.GITHUB_TOKEN}}
+          context: Publishing
+          state: pending
+          description: ${{ needs.compute-version.outputs.release_name }}
+          target_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+  release:
+    needs:
+      - compute-version
+    runs-on: ${{ inputs.image }}
+    steps:
+      - name: "📦 Checkout"
+        uses: actions/checkout@v4
+
+      - name: "📦 Fetch tags" # See https://github.com/actions/checkout/issues/2041
+        run: git fetch --tags
+
+      - name: "⚙️ Configure Java"
+        run: echo "JAVA_HOME=$(echo $JAVA_HOME_${{ inputs.java }}_X64)" >> "$GITHUB_ENV"
+
+      - name: "⚙️ Configure Gradle"
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: wrapper
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      - name: "⚙️ Generate release changelog"
+        run: |
+          echo "# Changelog" > changelog.md
+          echo "" >> changelog.md
+          echo "[Full Changelog](${{ github.server_url }}/${{ github.repository }}/compare/${{ needs.compute-version.outputs.current_full_version }}..${{ needs.compute-version.outputs.next_full_version }})" >> changelog.md
+          echo "" >> changelog.md
+          ./gradlew --build-cache outputChangelogHeader -PfullVersion=${{ needs.compute-version.outputs.next_full_version }}
+          echo "### Commits:" >> changelog.md
+          echo "" >> changelog.md
+          echo "$(git log --pretty=format:"- %s ([commit](${{ github.server_url }}/${{ github.repository }}/commit/%H))" v${{ needs.compute-version.outputs.current_mod_version }}..v${{ needs.compute-version.outputs.next_full_version }})" >> changelog.md
+          echo "" >> changelog.md
+          ./gradlew --build-cache outputChangelogFooter -PfullVersion=${{ needs.compute-version.outputs.next_full_version }}
+          sed -i -E "s|\(#([[:digit:]]+)\)|([#\1](${{ github.server_url }}/${{ github.repository }}/pull/\1))|" changelog.md
+          echo "Outputting full changelog"
+          cat changelog.md
+
+      - name: "⚙️ Create tag"
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "maintainer+github@ldtteam.com"
+          git tag -f "v${{ needs.compute-version.outputs.next_full_version }}"
+
+      - name: "🚀 Create GitHub release"
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ needs.compute-version.outputs.next_full_version }}
+          release_name: ${{ needs.compute-version.outputs.release_name }}
+          body_path: changelog.md
+          prerelease: ${{ inputs.release_type != 'release' }}
+
+  publish:
+    needs:
+      - release
+      - compute-version
+    uses: ./.github/workflows/internal.gradle.publish.yaml
+    with:
+      image: ${{ inputs.image }}
+      java: ${{ inputs.java }}
+      version: ${{ needs.compute-version.outputs.next_full_version }}
+      gradle_publish_task: publish
+      release_type: ${{ inputs.release_type }}
+    secrets:
+      GRADLE_ENCRYPTION_KEY: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+      JFROG_PUBLISH_USER: ${{ secrets.MAVEN_USER }}
+      JFROG_PUBLISH_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
+      CROWDIN_API_KEY: ${{ secrets.CROWDIN_API_KEY }}
+      CURSE_API_KEY: ${{ secrets.CURSE_API_KEY }}
+
+  notify-build-end:
+    needs:
+      - compute-version
+      - publish
+    if: ${{ always() }}
+    runs-on: ${{ inputs.image }}
+    steps:
+      - uses: neoforged/action-webhooks@v1
+        name: "🔴 Send Discord end notification"
+        with:
+          webhook_url: ${{ secrets.DISCORD_WEBHOOK }}
+          status: ${{ needs.publish.result }}
+          version: "${{ needs.compute-version.outputs.next_full_version }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: neoforged/action-github-status@v1
+        name: "🚧 Set build status"
+        with:
+          authToken: ${{ secrets.GITHUB_TOKEN }}
+          context: "Publishing"
+          state: ${{ needs.publish.result }}
+          description: ${{ needs.compute-version.outputs.release_name }}
+          target_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
